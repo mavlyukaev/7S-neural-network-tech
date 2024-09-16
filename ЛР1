@@ -1,0 +1,46 @@
+#1
+import numpy as np
+A = np.array([[3.25,-1.07,2.34],[10.1,0.25,-4.78],[5.04,-7.79,3.31]])
+print(A)
+
+#2
+A_inv=np.linalg.inv(A)
+print(A_inv)
+
+#3
+B=np.random.rand(3,3)
+print(B)
+
+#4
+result_1=A+10*B
+result_2=np.dot(A,B)
+result_3=B.T
+print(result_1)
+print(result_2)
+print(result_3)
+
+#5
+A_sorted=np.sort(A,axis=0)
+max_B=np.max(B)
+min_B=np.min(B)
+det_B=np.linalg.det(B)
+print(A_sorted)
+print(max_B)
+print(min_B)
+print(det_B)
+
+#6
+D=(np.sin(A))+(B**(3/5))
+print(D)
+
+#7
+C=np.ones((4,1))
+C[1]=2.94
+C[2]=-2.2
+C[3]=0.1
+print(C)
+
+#8
+b=np.array([0.6, 3.2, -1.8, 0.05])
+cosin_sim=np.dot(b, C) / (np.linalg.norm(b)*np.linalg.norm(C))
+print(cosin_sim)
