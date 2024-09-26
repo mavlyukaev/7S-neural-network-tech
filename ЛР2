@@ -1,0 +1,134 @@
+import pandas as pd
+import numpy as np
+
+#1
+s = pd.Series(data=['1', 5, 3.1, 'hello', -5, -1000, 12.78, 'world', 10.10, '!', 98], 
+              index=range(6, 28, 2))
+
+new_s = pd.Series(s.values, index=range(4, 15))
+
+int_elements = pd.to_numeric(s, errors='coerce').dropna().astype(int)
+
+variance = np.var(int_elements, ddof=0)
+
+print("Новый Series:\n", new_s)
+print("\nЦелочисленные элементы:\n", int_elements)
+print("\nДисперсия:", variance)
+
+#2
+np.random.seed(242)
+
+data_array = np.random.normal(size=200)
+
+data_cubed_array = data_array ** 3
+
+indices_array = np.arange(200) * 5
+
+sum_odd_index_array = data_cubed_array[(data_cubed_array < 2.5) & (indices_array % 2 != 0)].sum()
+
+count_less_than_zero_array = (data_cubed_array < 0).sum()
+
+print("Сумма элементов, строго меньших 2.5, с нечётными индексами:", sum_odd_index_array)
+print("Количество значений серии меньше нуля:", count_less_than_zero_array)
+
+#2.1
+tr_mcc_codes = pd.read_csv('data/tr_mcc_codes.csv', delimiter=',')  # Здесь используется запятая как разделитель
+tr_types = pd.read_csv('data/tr_types.csv', delimiter=',')  # Здесь тоже запятая как разделитель
+transactions = pd.read_csv('data/transactions.csv', delimiter=';', nrows=1000000)  # Используется точка с запятой
+gender_train = pd.read_csv('data/gender_train.csv', delimiter='\t')  # Табуляция как разделитель
+
+print(tr_mcc_codes.head())
+print(tr_types.head())
+print(transactions.head())
+print(gender_train.head())
+
+#3
+transactions.set_index('customer_id', inplace=True)
+
+max_transaction_customer_id = transactions['amount'].idxmax()
+
+customer_transactions = transactions.loc[max_transaction_customer_id]
+most_frequent_amount = customer_transactions['amount'].abs().mode()[0]  # abs() для нахождения модуля
+
+min_transaction_customer_id = transactions['amount'].idxmin()
+
+print("Клиент с максимальной суммой транзакции (приход):", max_transaction_customer_id)
+print("Наиболее часто встречающийся модуль суммы транзакций:", most_frequent_amount)
+print("Клиент с минимальной суммой транзакции (расход):", min_transaction_customer_id)
+
+#4
+median_all = transactions['amount'].median()
+
+median_non_na = transactions.dropna().amount.median()
+
+sorted_transactions = transactions.sort_values(by='amount', ascending=False)
+unique_transactions = sorted_transactions.drop_duplicates(subset=['mcc_code', 'tr_type'], keep='first')
+median_unique_sorted = unique_transactions['amount'].median()
+
+medians = [median_all, median_non_na, median_unique_sorted]
+max_difference = np.ptp(medians)  # ptp = peak to peak, разница между max и min значениями
+
+print("Медиана всех транзакций:", median_all)
+print("Медиана без пустых значений:", median_non_na)
+print("Медиана отсортированных уникальных транзакций:", median_unique_sorted)
+print("Максимальная разница между медианами:", max_difference)
+
+#5
+transactions = transactions.merge(tr_mcc_codes, on='mcc_code', how='inner')
+
+transactions = transactions.merge(tr_types, on='tr_type', how='inner')
+
+transactions = transactions.merge(gender_train, on='customer_id', how='left')
+
+del tr_mcc_codes, tr_types, gender_train
+
+print(f"Количество строк после объединения: {len(transactions)}")
+
+assert len(transactions) == 999584, f"Ожидаемое количество строк: 999584, но получено: {len(transactions)}"
+
+#6
+expenses = transactions[transactions['amount'] < 0]
+
+median_by_gender = expenses.groupby('gender')['amount'].median()
+
+mod_difference = abs(median_by_gender[0] - median_by_gender[1])
+
+print(f"Модуль разницы между медианными тратами женщин и мужчин: {mod_difference}")
+
+#7
+incomes = transactions[transactions['amount'] > 0]
+
+max_income_by_gender_tr_type = incomes.groupby(['gender', 'tr_type'])['amount'].max().reset_index()
+max_income_by_gender_tr_type.rename(columns={'amount': 'max_income'}, inplace=True)
+
+top_10_men = max_income_by_gender_tr_type[max_income_by_gender_tr_type['gender'] == 0].nlargest(10, 'max_income')
+top_10_women = max_income_by_gender_tr_type[max_income_by_gender_tr_type['gender'] == 1].nlargest(10, 'max_income')
+
+common_transactions = pd.merge(top_10_men, top_10_women, on='tr_type', suffixes=('_men', '_women'))
+
+print("Общие транзакции между мужчинами и женщинами по типам транзакций:")
+print(common_transactions)
+
+#8
+transactions['tr_day'] = transactions['tr_datetime'].str.split(' ').str[0]
+
+mcc_count_by_day = transactions.groupby('tr_day')['mcc_code'].nunique()
+
+valid_days = mcc_count_by_day[mcc_count_by_day > 75].index
+filtered_transactions = transactions[transactions['tr_day'].isin(valid_days)]
+
+grouped = filtered_transactions.groupby(['mcc_code', 'gender'])
+
+median_expenses = grouped['amount'].median().abs()
+
+floristics_code = 5992  # Пример кода для флористики
+bars_code = 5813  # Пример кода для баров и клубов
+securities_code = 6211  # Пример кода для ценных бумаг
+
+floristics_median = median_expenses.loc[floristics_code]
+bars_median = median_expenses.loc[bars_code]
+securities_median = median_expenses.loc[securities_code]
+
+print("Медианы расходов/приходов для флористики:", floristics_median)
+print("Медианы расходов/приходов для баров и клубов:", bars_median)
+print("Медианы расходов/приходов для ценных бумаг:", securities_median)
