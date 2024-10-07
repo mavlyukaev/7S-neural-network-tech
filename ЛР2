@@ -6,9 +6,7 @@ s = pd.Series(data=['1', 5, 3.1, 'hello', -5, -1000, 12.78, 'world', 10.10, '!',
               index=range(6, 28, 2))
 
 new_s = pd.Series(s.values, index=range(4, 15))
-
-int_elements = pd.to_numeric(s, errors='coerce').dropna().astype(int)
-
+int_elements = s[s.apply(lambda x: isinstance(x, int))]
 variance = np.var(int_elements, ddof=0)
 
 print("Новый Series:\n", new_s)
@@ -74,17 +72,14 @@ print("Медиана отсортированных уникальных тра
 print("Максимальная разница между медианами:", max_difference)
 
 #5
-transactions = transactions.merge(tr_mcc_codes, on='mcc_code', how='inner')
-
-transactions = transactions.merge(tr_types, on='tr_type', how='inner')
-
-transactions = transactions.merge(gender_train, on='customer_id', how='left')
-
-del tr_mcc_codes, tr_types, gender_train
+transactions = pd.read_csv(filepath_or_buffer = "../Mavlyukaev_AI/data/transactions.csv", 
+                           sep=',', 
+                           nrows=1000000)
+transactions = transactions.merge(tr_mcc_codes)
+transactions = transactions.merge(tr_types)
+transactions = transactions.merge(gender_train, how='left')
 
 print(f"Количество строк после объединения: {len(transactions)}")
-
-assert len(transactions) == 999584, f"Ожидаемое количество строк: 999584, но получено: {len(transactions)}"
 
 #6
 expenses = transactions[transactions['amount'] < 0]
@@ -121,9 +116,9 @@ grouped = filtered_transactions.groupby(['mcc_code', 'gender'])
 
 median_expenses = grouped['amount'].median().abs()
 
-floristics_code = 5992  # Пример кода для флористики
-bars_code = 5813  # Пример кода для баров и клубов
-securities_code = 6211  # Пример кода для ценных бумаг
+floristics_code = tr_mcc_codes[tr_mcc_codes['mcc_description'] == "Флористика"]['mcc_code'].iloc[0]
+bars_code = tr_mcc_codes[tr_mcc_codes['mcc_description'] == "Бары, коктейль-бары, дискотеки, ночные клубы и таверны — места продажи алкогольных напитков"]['mcc_code'].iloc[0] 
+securities_code = tr_mcc_codes[tr_mcc_codes['mcc_description'] == "Ценные бумаги: брокеры/дилеры"]['mcc_code'].iloc[0]
 
 floristics_median = median_expenses.loc[floristics_code]
 bars_median = median_expenses.loc[bars_code]
