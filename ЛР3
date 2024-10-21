@@ -1,0 +1,130 @@
+#1 задание
+import numpy as np
+import pandas as pd
+import matplotlib.pyplot as plt
+
+data = pd.read_csv("../Mavlyukaev_AI/data/winemag-data-130k-v2.csv")
+
+points = data['points'].to_numpy()
+price = data['price'].to_numpy()
+
+#а
+plt.figure(figsize=(10, 10))
+plt.scatter(points, price, alpha=0.5)
+plt.title('Scatter Plot')
+plt.xlabel('Points')
+plt.ylabel('Price')
+plt.show()
+
+#б
+countries, counts = np.unique(data['country'].dropna().to_numpy(), return_counts=True)
+plt.figure(figsize=(10, 10))
+plt.bar(countries, counts)
+plt.xticks(rotation=90)
+plt.title('Barplot')
+plt.xlabel('Country')
+plt.ylabel('Count')
+plt.show()
+
+#2 задание
+def f(x, y):
+    return np.log(x**2 + y**2 - x*y)
+
+x = np.linspace(1, 2, 10)
+y = np.linspace(1, 2, 10)
+X, Y = np.meshgrid(x, y)
+
+Z = f(X, Y)
+
+fig = plt.figure(figsize=(10, 10))
+ax = fig.add_subplot(111, projection='3d')
+surface = ax.plot_surface(X, Y, Z, cmap='viridis')
+
+fig.colorbar(surface)
+ax.set_title('f(x, y) = ln(x^2 + y^2 - xy)')
+ax.set_xlabel('X')
+ax.set_ylabel('Y')
+ax.set_zlabel('f(x, y)')
+plt.show()
+
+#3 задание
+from datetime import datetime
+
+tr_mcc_codes = pd.read_csv(filepath_or_buffer = "../Mavlyukaev_AI/data/tr_mcc_codes.csv", 
+                           sep=';')
+tr_types = pd.read_csv(filepath_or_buffer = "../Mavlyukaev_AI/data/tr_types.csv", 
+                       sep=';')
+transactions = pd.read_csv(filepath_or_buffer = "../Mavlyukaev_AI/data/transactions.csv", 
+                           sep=',', 
+                           nrows=1000000)
+gender_train = pd.read_csv(filepath_or_buffer = "../Mavlyukaev_AI/data/gender_train.csv", 
+                           sep=',')
+
+transactions = transactions.merge(tr_mcc_codes, on='mcc_code')
+transactions = transactions.merge(tr_types, on='tr_type')
+transactions = transactions.merge(gender_train, on='customer_id', how='left')
+
+print(f"Количество строк после объединения: {len(transactions)}")
+
+transactions['tr_day'] = transactions['tr_datetime'].str.split(' ').str[0]
+print(transactions[['tr_datetime', 'tr_day']].head())
+
+#4 задание
+#1
+transactions['amount_bucket'] = pd.qcut(transactions[transactions['amount'] < 0]['amount'], 
+                                         q=5, 
+                                         labels=['Very High', 'High', 'Middle', 'Low', 'Very Low'])
+#2
+transactions['amount_bucket'] = transactions['amount_bucket'].cat.add_categories('Income')
+transactions.loc[transactions['amount'] >= 0, 'amount_bucket'] = 'Income'
+print(transactions[['amount', 'amount_bucket']].head())
+
+#3
+transactions['tr_hour'] = transactions['tr_datetime'].str.split(' ').apply(lambda x: int(x[1].split(':')[0]))
+print(transactions[['tr_datetime', 'tr_hour']].head())
+
+#4
+pivot_table = transactions.pivot_table(values='gender', 
+                                       index='tr_hour', 
+                                       columns='amount_bucket', 
+                                       aggfunc=lambda x: (x == '1.0').mean(), 
+                                       observed=False)
+
+print(pivot_table)
+
+#5
+def plot_pivot_table(pivot_table):
+    pivot_table.plot(kind='bar', figsize=(12, 6))
+    plt.title('Доля мужчин по часам и категориям расходов')
+    plt.xlabel('Час')
+    plt.ylabel('Доля мужчин')
+    plt.xticks(rotation=0)
+    plt.legend(title='Категории расходов')
+    plt.tight_layout()
+    plt.show()
+
+plot_pivot_table(pivot_table)
+
+#5 задание
+#1
+transactions['tr_day'] = transactions['tr_day'].astype(int)
+
+#2
+mcc_counts = transactions['mcc_code'].value_counts()
+frequent_mcc_codes = mcc_counts[mcc_counts > 60000].index
+
+#3
+filtered_transactions = transactions[transactions['mcc_code'].isin(frequent_mcc_codes)]
+grouped_means = filtered_transactions.groupby(['tr_day', 'mcc_code'])['amount'].mean().reset_index()
+
+#4
+pivot_table = grouped_means.pivot(index='tr_day', columns='mcc_code', values='amount')
+
+plt.figure(figsize=(12, 6))
+pivot_table.plot()
+plt.title('Средние суммы по MCC кодам по дням')
+plt.xlabel('День')
+plt.ylabel('Средняя сумма')
+plt.legend(title='MCC код')
+plt.grid()
+plt.show()
