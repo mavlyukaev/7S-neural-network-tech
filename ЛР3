@@ -2,6 +2,7 @@
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
+import seaborn as sns
 
 data = pd.read_csv("../Mavlyukaev_AI/data/winemag-data-130k-v2.csv")
 
@@ -70,57 +71,57 @@ transactions['tr_day'] = transactions['tr_datetime'].str.split(' ').str[0]
 print(transactions[['tr_datetime', 'tr_day']].head())
 
 #4 задание
-#1
+# 1
 transactions['amount_bucket'] = pd.qcut(transactions[transactions['amount'] < 0]['amount'], 
                                          q=5, 
                                          labels=['Very High', 'High', 'Middle', 'Low', 'Very Low'])
-#2
+
+# 2
 transactions['amount_bucket'] = transactions['amount_bucket'].cat.add_categories('Income')
 transactions.loc[transactions['amount'] >= 0, 'amount_bucket'] = 'Income'
 print(transactions[['amount', 'amount_bucket']].head())
 
-#3
+# 3
 transactions['tr_hour'] = transactions['tr_datetime'].str.split(' ').apply(lambda x: int(x[1].split(':')[0]))
 print(transactions[['tr_datetime', 'tr_hour']].head())
 
-#4
-pivot_table = transactions.pivot_table(values='gender', 
-                                       index='tr_hour', 
+# 4. Создание сводной таблицы
+pivot_table = transactions.pivot_table(index='tr_hour', 
                                        columns='amount_bucket', 
-                                       aggfunc=lambda x: (x == '1.0').mean(), 
-                                       observed=False)
+                                       values='gender', 
+                                       observed=False,
+                                       fill_value=0)
 
-print(pivot_table)
-
-#5
+# 5. Функция для отрисовки сводной таблицы
 def plot_pivot_table(pivot_table):
-    pivot_table.plot(kind='bar', figsize=(12, 6))
-    plt.title('Доля мужчин по часам и категориям расходов')
-    plt.xlabel('Час')
-    plt.ylabel('Доля мужчин')
-    plt.xticks(rotation=0)
-    plt.legend(title='Категории расходов')
-    plt.tight_layout()
+    pivot_table.plot(kind='bar', stacked=True, figsize=(12, 8))
+    plt.title('Распределение транзакций по времени, категориям затрат и полу')
+    plt.xlabel('Час транзакции')
+    plt.ylabel('Количество транзакций')
+    plt.legend(title='Категория затрат и пол')
     plt.show()
 
 plot_pivot_table(pivot_table)
+sns.heatmap(pivot_table, annot=True)
+
+# 6. Ответы: 1, 3, 5
 
 #5 задание
-#1
+# 1
 transactions['tr_day'] = transactions['tr_day'].astype(int)
 
-#2
+# 2
 mcc_counts = transactions['mcc_code'].value_counts()
 frequent_mcc_codes = mcc_counts[mcc_counts > 60000].index
 
-#3
+# 3
 filtered_transactions = transactions[transactions['mcc_code'].isin(frequent_mcc_codes)]
 grouped_means = filtered_transactions.groupby(['tr_day', 'mcc_code'])['amount'].mean().reset_index()
 
-#4
+# 4
 pivot_table = grouped_means.pivot(index='tr_day', columns='mcc_code', values='amount')
 
-plt.figure(figsize=(12, 6))
+plt.figure(figsize=(12, 12))
 pivot_table.plot()
 plt.title('Средние суммы по MCC кодам по дням')
 plt.xlabel('День')
@@ -128,3 +129,5 @@ plt.ylabel('Средняя сумма')
 plt.legend(title='MCC код')
 plt.grid()
 plt.show()
+
+# 5. Ответы: 1, 2, 4
